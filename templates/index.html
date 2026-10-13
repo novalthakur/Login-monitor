@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SOC Login Monitor{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <p class="text-muted">Brute force detection and login monitoring</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card critical">
+            <div class="card-body">
+                <h6 class="card-title">Critical</h6>
+                <h2 class="stat-number">{{ stats.by_severity.get('Critical', 0) }}</h2>
+                <small class="text-muted">51+ attempts or success after failures</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card high">
+            <div class="card-body">
+                <h6 class="card-title">High</h6>
+                <h2 class="stat-number">{{ stats.by_severity.get('High', 0) }}</h2>
+                <small class="text-muted">16-50 attempts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card medium">
+            <div class="card-body">
+                <h6 class="card-title">Medium</h6>
+                <h2 class="stat-number">{{ stats.by_severity.get('Medium', 0) }}</h2>
+                <small class="text-muted">6-15 attempts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card low">
+            <div class="card-body">
+                <h6 class="card-title">Low</h6>
+                <h2 class="stat-number">{{ stats.by_severity.get('Low', 0) }}</h2>
+                <small class="text-muted">3-5 attempts</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Total Alerts: {{ stats.total_alerts }}</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="severityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Top Attacking IPs</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>IP Address</th>
+                                <th>Alerts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i, ip_data in enumerate(stats.top_attacking_ips) %}
+                            <tr>
+                                <td>{{ i + 1 }}</td>
+                                <td><a href="{{ url_for('alerts', ip=ip_data.ip) }}">{{ ip_data.ip }}</a></td>
+                                <td>{{ ip_data.count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Alerts</h5>
+                <a href="{{ url_for('alerts') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="recentAlertsTable">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>IP</th>
+                                <th>Username(s)</th>
+                                <th>Severity</th>
+                                <th>Attempts</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in recent_alerts %}
+                            <tr>
+                                <td>{{ alert.first_seen.strftime('%Y-%m-%d %H:%M:%S') if alert.first_seen else 'N/A' }}</td>
+                                <td><a href="{{ url_for('alerts', ip=alert.ip) }}">{{ alert.ip }}</a></td>
+                                <td>{{ alert.username }}</td>
+                                <td><span class="badge severity-{{ alert.severity.lower() }}">{{ alert.severity }}</span></td>
+                                <td>{{ alert.attempt_count }}</td>
+                                <td class="text-truncate" style="max-width: 300px;">{{ alert.details }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No alerts found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('severityChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Critical', 'High', 'Medium', 'Low'],
+                datasets: [{
+                    data: [
+                        {{ stats.by_severity.get('Critical', 0) }},
+                        {{ stats.by_severity.get('High', 0) }},
+                        {{ stats.by_severity.get('Medium', 0) }},
+                        {{ stats.by_severity.get('Low', 0) }}
+                    ],
+                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#198754']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    if ({{ auto_refresh }}) {
+        setInterval(() => location.reload(), {{ auto_refresh }} * 1000);
+    }
+});
+</script>
+{% endblock %}

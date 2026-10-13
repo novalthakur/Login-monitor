@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}All Alerts - SOC Login Monitor{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-list-ul"></i> All Alerts</h2>
+        <p class="text-muted">Total: {{ total }} alerts</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3" id="filterForm">
+                    <div class="col-md-3">
+                        <label class="form-label">Severity</label>
+                        <select name="severity" class="form-select">
+                            <option value="">All</option>
+                            {% for sev in severities %}
+                            <option value="{{ sev }}" {% if filters.get('severity') == sev %}selected{% endif %}>{{ sev }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">IP Address</label>
+                        <input type="text" name="ip" class="form-control" placeholder="e.g. 192.168.1.100" value="{{ filters.get('ip', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="e.g. root, admin" value="{{ filters.get('username', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Acknowledged</label>
+                        <select name="acknowledged" class="form-select">
+                            <option value="">All</option>
+                            <option value="true" {% if filters.get('acknowledged') == 'true' %}selected{% endif %}>Yes</option>
+                            <option value="false" {% if filters.get('acknowledged') == 'false' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ filters.get('start_date', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ filters.get('end_date', '') }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <a href="{{ url_for('alerts') }}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-circle"></i> Clear</a>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <a href="{{ url_for('export', **request.args) }}" class="btn btn-success w-100"><i class="bi bi-download"></i> Export CSV</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="alertsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>First Seen</th>
+                                <th>Last Seen</th>
+                                <th>IP</th>
+                                <th>Username(s)</th>
+                                <th>Severity</th>
+                                <th>Attempts</th>
+                                <th>Details</th>
+                                <th>Ack</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts %}
+                            <tr>
+                                <td>{{ alert.id }}</td>
+                                <td>{{ alert.first_seen.strftime('%Y-%m-%d %H:%M:%S') if alert.first_seen else 'N/A' }}</td>
+                                <td>{{ alert.last_seen.strftime('%Y-%m-%d %H:%M:%S') if alert.last_seen else 'N/A' }}</td>
+                                <td><a href="{{ url_for('alerts', ip=alert.ip) }}">{{ alert.ip }}</a></td>
+                                <td>{{ alert.username }}</td>
+                                <td><span class="badge severity-{{ alert.severity.lower() }}">{{ alert.severity }}</span></td>
+                                <td>{{ alert.attempt_count }}</td>
+                                <td class="text-truncate" style="max-width: 300px;">{{ alert.details }}</td>
+                                <td>
+                                    {% if alert.acknowledged %}
+                                        <i class="bi bi-check-circle-fill text-success" title="Acknowledged"></i>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-success acknowledge-btn" data-alert-id="{{ alert.id }}">
+                                            <i class="bi bi-check"></i> Ack
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">No alerts match the current filters</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_pages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('alerts', **dict(request.args, page=page-1)) }}">Previous</a>
+                        </li>
+                        {% for p in range(max(1, page-2), min(total_pages, page+2)+1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alerts', **dict(request.args, page=p)) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('alerts', **dict(request.args, page=page+1)) }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.acknowledge-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const alertId = this.dataset.alertId;
+            fetch(`/alerts/${alertId}/acknowledge`, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        this.outerHTML = '<i class="bi bi-check-circle-fill text-success" title="Acknowledged"></i>';
+                    }
+                });
+        });
+    });
+});
+</script>
+{% endblock %}

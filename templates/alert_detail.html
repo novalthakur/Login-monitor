@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Alert #{{ alert.id }} - SOC Login Monitor{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-exclamation-triangle"></i> Alert #{{ alert.id }}</h2>
+            <a href="{{ url_for('alerts') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card {{ alert.severity.lower() }}">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ alert.severity }}</h3>
+                <p class="card-text">{{ alert.attempt_count }} failed attempts</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">IP Address</h6>
+                <p class="fs-5 fw-bold">{{ alert.ip }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Username(s)</h6>
+                <p class="fs-5 fw-bold">{{ alert.username }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h6><i class="bi bi-calendar"></i> Time Range</h6></div>
+            <div class="card-body">
+                <p><strong>First Seen:</strong> {{ alert.first_seen.strftime('%Y-%m-%d %H:%M:%S') if alert.first_seen else 'N/A' }}</p>
+                <p><strong>Last Seen:</strong> {{ alert.last_seen.strftime('%Y-%m-%d %H:%M:%S') if alert.last_seen else 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h6><i class="bi bi-info-circle"></i> Details</h6></div>
+            <div class="card-body">
+                <pre class="mb-0">{{ alert.details }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> Actions</h5>
+                {% if not alert.acknowledged %}
+                <form method="POST" action="{{ url_for('acknowledge_alert', alert_id=alert.id) }}">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Acknowledge</button>
+                </form>
+                {% else %}
+                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Acknowledged</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('alerts', ip=alert.ip) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> View All Alerts for This IP
+                    </a>
+                    <a href="{{ url_for('export', ip=alert.ip) }}" class="btn btn-outline-success">
+                        <i class="bi bi-download"></i> Export This IP's Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+# SOC Login Monitor Configuration
+
+# Detection thresholds (failed attempts per IP within time window)
+thresholds:
+  low: 3
+  medium: 6
+  high: 16
+  critical: 51
+
+# Time window for counting attempts (in minutes)
+time_window_minutes: 15
+
+# Database path
+database:
+  path: "data/alerts.db"
+
+# Report output directory
+reports:
+  directory: "reports"
+
+# Dashboard settings
+dashboard:
+  host: "0.0.0.0"
+  port: 5000
+  auto_refresh_seconds: 10
+  alerts_per_page: 50
+
+# Log parsing
+log_parser:
+  # Supported formats: linux, windows
+  default_format: "linux"
+  # Linux auth.log regex patterns
+  linux_patterns:
+    failed_ssh: "Failed password for (\\S+) from (\\S+) port"
+    failed_sudo: "FAILED sudo:.*user=(\\S+)"
+    success_ssh: "Accepted password for (\\S+) from (\\S+) port"
+  # Windows CSV column mapping (EventID 4625 = failed, 4624 = success)
+  windows_columns:
+    timestamp: "TimeCreated"
+    event_id: "EventID"
+    ip: "IpAddress"
+    username: "TargetUserName"
+    logon_type: "LogonType"
